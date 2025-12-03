@@ -1,0 +1,7 @@
+input_graph/
+metadata/
+model/
+embedding_data/
+output/
+logs/*.log
+python_packages/
