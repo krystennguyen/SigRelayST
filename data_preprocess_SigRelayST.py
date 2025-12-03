@@ -10,7 +10,7 @@
 # Xin, Y., et al. "Lignature: A Comprehensive Database of Ligand Signatures to 
 # Predict Cell-Cell Communication."
 #
-# usage: python data_preprocess_SigRelayST.py --data_name='V1_Human_Lymph_Node_spatial' --data_from='data/V1_Human_Lymph_Node_spatial/' --signature_database='database/signatures_all.csv' --signature_bias_type='n_significant_genes' 2>&1 | tee logs/preprocessing_$(date +%Y%m%d_%H%M%S).log
+# usage: python data_preprocess_SigRelayST.py --data_name='V1_Human_Lymph_Node_spatial' --data_from='data/V1_Human_Lymph_Node_spatial/' --signature_database='database/sigrelay_LR_pair_bias_capped.csv' --signature_bias_type='scaled_bias' 2>&1 | tee logs/preprocessing_$(date +%Y%m%d_%H%M%S).log
 
 
 
@@ -53,8 +53,8 @@ if __name__ == "__main__":
     parser.add_argument( '--block_autocrine', type=int, default=0 , help='Set to 1 if you want to ignore autocrine signals.') 
     parser.add_argument( '--block_juxtacrine', type=int, default=0, help='Set to 1 if you want to ignore juxtacrine signals.')     
     parser.add_argument( '--database_path', type=str, default='database/CellNEST_database.csv' , help='Provide your desired ligand-receptor database path here. Default database is a combination of CellChat and NicheNet database.') 
-    parser.add_argument( '--signature_database', type=str, default='', help='Path to signatures_all.csv to add signature bias to edges. If provided, edge attributes will have 4 dimensions instead of 3.')
-    parser.add_argument( '--signature_bias_type', type=str, default='n_significant_genes', choices=['n_significant_genes', 'n_upregulated', 'n_downregulated', 'total_strength'], help='Which signature metric to use as bias')
+    parser.add_argument( '--signature_database', type=str, default='database/sigrelay_LR_pair_bias_capped.csv', help='Path to sigrelay_LR_pair_bias_capped.csv to add signature bias to edges. If provided, edge attributes will have 4 dimensions instead of 3.')
+    parser.add_argument( '--signature_bias_type', type=str, default='scaled_bias', choices=['scaled_bias'], help='Which signature metric to use as bias (uses scaled_bias from sigrelay_LR_pair_bias_capped.csv)')
     
     args = parser.parse_args()
     
@@ -254,49 +254,24 @@ if __name__ == "__main__":
     
     ####################################################################
     # Load signature database if provided
-    signature_lookup = {}
+    signature_bias_dict = {}
     use_signature_bias = False
     if args.signature_database != '' and os.path.exists(args.signature_database):
         print('Loading signature database for bias calculation...')
         sig_df = pd.read_csv(args.signature_database)
-        print(f'Loaded {len(sig_df)} signature entries')
+        print(f'Loaded {len(sig_df)} ligand-receptor pairs')
         
-        # Create lookup: (ligand, receptor) -> list of signature metrics
+        # Create lookup: (ligand, receptor) -> scaled_bias
         for _, row in sig_df.iterrows():
-            ligand = row['ligand']
-            perturbed_receptors_str = str(row['perturbed_receptors'])
+            ligand = str(row['ligand']).upper()
+            receptor = str(row['receptor']).upper()
             
-            # Skip if no perturbed receptors
-            if pd.isna(perturbed_receptors_str) or perturbed_receptors_str == '':
-                continue
+            # Get the scaled_bias value (this is the signature bias for attention score)
+            bias_value = float(row['scaled_bias'])
             
-            # Parse comma-separated receptors
-            perturbed_receptors = [r.strip().upper() for r in perturbed_receptors_str.split(',')]
-            
-            # Get the bias value based on type
-            if args.signature_bias_type == 'n_significant_genes':
-                bias_value = row['n_significant_genes']
-            elif args.signature_bias_type == 'n_upregulated':
-                bias_value = row['n_upregulated']
-            elif args.signature_bias_type == 'n_downregulated':
-                bias_value = row['n_downregulated']
-            elif args.signature_bias_type == 'total_strength':
-                bias_value = row['total_strength']
-            else:
-                bias_value = row['n_significant_genes']
-            
-            # Store for each receptor
-            for receptor in perturbed_receptors:
-                key = (ligand.upper(), receptor.upper())
-                if key not in signature_lookup:
-                    signature_lookup[key] = []
-                signature_lookup[key].append(bias_value)
-        
-        # Aggregate (sum or average) for each ligand-receptor pair
-        signature_bias_dict = {}
-        for key, values in signature_lookup.items():
-            # Use sum of n_significant_genes across all matching signatures
-            signature_bias_dict[key] = sum(values)
+            # Store directly (no aggregation needed - one value per LR pair)
+            key = (ligand, receptor)
+            signature_bias_dict[key] = bias_value
         
         print(f'Created signature bias lookup for {len(signature_bias_dict)} ligand-receptor pairs')
         use_signature_bias = True
