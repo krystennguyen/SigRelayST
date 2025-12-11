@@ -1,2 +1,5 @@
 logs/*.log
 python_packages/
+
+# GCP configuration (contains sensitive GCP project info)
+gcp_scripts/gcp_config.sh

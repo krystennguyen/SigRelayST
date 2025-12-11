@@ -37,7 +37,6 @@ def get_graph(training_data, expression_matrix_path=''):
     datapoint_size = num_cell
     #print(edge_weight)
     if expression_matrix_path == '':
-        # Try to find expression matrix in same directory as training_data
         training_dir = os.path.dirname(training_data)
         data_name = os.path.basename(training_data).replace('_adjacency_records', '')
         potential_path = os.path.join(training_dir, data_name + '_cell_vs_gene_quantile_transformed')
@@ -198,7 +197,6 @@ def train_SigRelayST(args, data_loader, in_channels, edge_dim=3):
         corruption=corruption).to(device)
     
     #print('initialized DGI model')
-    #DGI_optimizer = torch.optim.Adam(DGI_model.parameters(), lr=0.005, weight_decay=5e-4)
     DGI_optimizer = torch.optim.Adam(DGI_model.parameters(), lr=args.lr_rate) #1e-5)#5 #6 #DGI_optimizer = torch.optim.RMSprop(DGI_model.parameters(), lr=1e-5)
     DGI_filename = args.model_path+'DGI_'+ args.model_name  +'.pth.tar'
 
@@ -210,12 +208,6 @@ def train_SigRelayST(args, data_loader, in_channels, edge_dim=3):
         DGI_optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         epoch_start = checkpoint['epoch']
         min_loss = checkpoint['loss']
-        '''
-        for state in DGI_optimizer.state.values():
-            for k, v in state.items():
-                if isinstance(v, torch.Tensor):
-                    state[k] = v.to(device)
-        ''' 
         print('min_loss was %g'%min_loss)
     else:
         print('Saving init model state ...')
@@ -231,7 +223,7 @@ def train_SigRelayST(args, data_loader, in_channels, edge_dim=3):
     import datetime
     start_time = datetime.datetime.now()
 
-    #print('training starts ...')
+
     for epoch in range(epoch_start, args.num_epoch):
         DGI_model.train()
         DGI_optimizer.zero_grad()
@@ -303,10 +295,7 @@ def train_SigRelayST(args, data_loader, in_channels, edge_dim=3):
                 np.savetxt(logfile,loss_curve, delimiter=',')
                 logfile.close()
 
-                #print(DGI_model.encoder.attention_scores_mine_unnormalized_l1[0:10])
-
-#            if ((epoch)%60000) == 0:
-#                DGI_optimizer = torch.optim.Adam(DGI_model.parameters(), lr=1e-6)  #5 #6
+               
 
     end_time = datetime.datetime.now()
 
