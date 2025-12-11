@@ -1,5 +1,8 @@
 logs/*.log
 python_packages/
 
-# GCP configuration (contains sensitive GCP project info)
+# GCP configuration 
 gcp_scripts/gcp_config.sh
+
+# LR_bias_db intermediate CSV files
+LR_bias_db/*.csv

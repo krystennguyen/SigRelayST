@@ -26,6 +26,7 @@ conda activate sigrelayst
 ### Database Files
 - `database/CellNEST_database.csv` - Ligand-receptor pair database (required)
 - `database/SigRelayST_LR_pair_bias.csv` - Signature bias database (required for WITH bias model)
+  - **Construction**: See [`LR_bias_db/README.md`](LR_bias_db/README.md) for workflow to build from Lignature database
 - `database/human_tf_target.csv` - TF-target database (required for relay confidence)
 - `database/human_signaling_ppi.csv` - PPI database (required for relay confidence)
 
@@ -68,6 +69,7 @@ SigRelayST/
 ├── output/                 # Results
 ├── logs/                   # Log files
 ├── database/               # Database files
+├── LR_bias_db/            # LR bias database construction workflow (see LR_bias_db/README.md)
 └── gcp_scripts/            # GCP scripts (see gcp_scripts/README.md)
 ```
 
