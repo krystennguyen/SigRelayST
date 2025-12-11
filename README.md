@@ -2,7 +2,8 @@
 
 SigRelayST extends CellNEST with signature-based bias terms derived from the Lignature database to improve cell-cell communication inference from spatial transcriptomics data.
 
-## Requirements: install dependencies from `env/requirements.txt` or `environment.yml`:
+## Requirements: 
+Install dependencies from `env/requirements.txt` or `environment.yml`:
 
 ```bash
 pip install -r env/requirements.txt
