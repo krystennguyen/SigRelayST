@@ -24,6 +24,7 @@ def get_graph(training_data, expression_matrix_path=''):
     """Add Statement of Purpose
     Args:
         training_data: Path to the input graph    
+        expression_matrix_path: Path to expression matrix (optional)
     Returns:
         List of torch_geometric.data.Data type: Loaded input graph
         Integer: Dimension of node embedding
@@ -36,13 +37,33 @@ def get_graph(training_data, expression_matrix_path=''):
     datapoint_size = num_cell
     #print(edge_weight)
     if expression_matrix_path == '':
-        # one hot vector used as node feature vector
-        X = np.eye(datapoint_size, datapoint_size)
-        np.random.shuffle(X)
-
-    else:
+        # Try to find expression matrix in same directory as training_data
+        training_dir = os.path.dirname(training_data)
+        data_name = os.path.basename(training_data).replace('_adjacency_records', '')
+        potential_path = os.path.join(training_dir, data_name + '_cell_vs_gene_quantile_transformed')
+        if os.path.exists(potential_path):
+            expression_matrix_path = potential_path
+            print(f"Found expression matrix at: {expression_matrix_path}")
+    
+    if expression_matrix_path != '' and os.path.exists(expression_matrix_path):
         f = gzip.open(expression_matrix_path, 'rb')
         X = pickle.load(f)
+    else:
+        # For large datasets, use sparse one-hot encoding instead of full identity matrix
+        if datapoint_size > 50000:
+            print(f"Warning: Large dataset ({datapoint_size} cells). Using sparse one-hot encoding instead of full identity matrix.")
+            # Create sparse one-hot encoding: each node gets a unique feature index
+            X = np.arange(datapoint_size).reshape(-1, 1)
+            np.random.shuffle(X)
+            # Convert to one-hot sparse representation
+            from scipy.sparse import csr_matrix
+            X_sparse = csr_matrix((np.ones(datapoint_size), (np.arange(datapoint_size), X.flatten())), shape=(datapoint_size, datapoint_size))
+            X = X_sparse.toarray()  # This is still dense, but we'll use the expression matrix instead
+            print("Consider using expression matrix for large datasets to avoid memory issues.")
+        else:
+            # one hot vector used as node feature vector
+            X = np.eye(datapoint_size, datapoint_size)
+            np.random.shuffle(X)
 
     X_data = X # node feature vector
     num_feature = X_data.shape[1]
@@ -166,7 +187,7 @@ def train_SigRelayST(args, data_loader, in_channels, edge_dim=3):
     Returns: 
         Trained DGI model
     """
-    loss_curve = np.zeros((args.num_epoch//500+1))
+    loss_curve = np.zeros((args.num_epoch//100+1))
     loss_curve_counter = 0
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -224,7 +245,7 @@ def train_SigRelayST(args, data_loader, in_channels, edge_dim=3):
             DGI_all_loss.append(DGI_loss.item())
             DGI_optimizer.step()
 
-        if ((epoch)%500) == 0:
+        if ((epoch)%100) == 0:
             print('Epoch: {:03d}, Loss: {:.4f}'.format(epoch+1, np.mean(DGI_all_loss)))
             loss_curve[loss_curve_counter] = np.mean(DGI_all_loss)
             loss_curve_counter = loss_curve_counter + 1

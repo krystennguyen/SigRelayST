@@ -1,6 +1,3 @@
-# Written By 
-# Fatema Tuz Zohora
-
 # SigRelayST: Signature-based Relay for Spatial Transcriptomics
 # This script extends CellNEST with signature-based bias terms derived from the Lignature database.
 #
@@ -18,11 +15,6 @@ import random
 import argparse
 import torch
 from torch_geometric.data import DataLoader
-
-
-
-
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -95,7 +87,13 @@ if __name__ == "__main__":
     if args.total_subgraphs == 1:
         from CCC_gat import get_graph, train_SigRelayST
         # data preparation
-        data_loader, num_feature, edge_dim = get_graph(args.training_data)
+        # Try to find expression matrix automatically
+        training_dir = os.path.dirname(args.training_data)
+        data_name_base = os.path.basename(args.training_data).replace('_adjacency_records', '')
+        expression_matrix_path = os.path.join(training_dir, data_name_base + '_cell_vs_gene_quantile_transformed')
+        if not os.path.exists(expression_matrix_path):
+            expression_matrix_path = ''
+        data_loader, num_feature, edge_dim = get_graph(args.training_data, expression_matrix_path=expression_matrix_path)
         # Update encoder edge_dim based on actual data
         from CCC_gat import Encoder
         # Create a temporary encoder to update edge_dim (will be recreated in train_SigRelayST)
@@ -106,14 +104,19 @@ if __name__ == "__main__":
     elif args.total_subgraphs > 1:
         from CCC_gat_split import get_split_graph, train_SigRelayST #_v2
         # data preparation
-        # graph_bag, num_feature = get_graph(args.training_data)
-        graph_bag, num_feature, edge_dim = get_split_graph(args.training_data, node_id_sorted, args.total_subgraphs)    
+        # Try to find expression matrix automatically
+        training_dir = os.path.dirname(args.training_data)
+        data_name_base = os.path.basename(args.training_data).replace('_adjacency_records', '')
+        expression_matrix_path = os.path.join(training_dir, data_name_base + '_cell_vs_gene_quantile_transformed')
+        if not os.path.exists(expression_matrix_path):
+            expression_matrix_path = ''
+        graph_bag, num_feature, edge_dim = get_split_graph(args.training_data, node_id_sorted, args.total_subgraphs, expression_matrix_path=expression_matrix_path)    
         # train the model
         DGI_model = train_SigRelayST(args, graph_bag=graph_bag, in_channels=num_feature, edge_dim=edge_dim)
         # training done
 
 
-    # you can do something with the model here
+    
 
 
 

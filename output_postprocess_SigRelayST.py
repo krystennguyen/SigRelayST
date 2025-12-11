@@ -1,6 +1,3 @@
-# Written By 
-# Fatema Tuz Zohora
-
 # SigRelayST: Signature-based Relay for Spatial Transcriptomics
 # This script extends CellNEST with signature-based bias terms derived from the Lignature database.
 #
